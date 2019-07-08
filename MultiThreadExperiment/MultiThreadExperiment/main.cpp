@@ -10,12 +10,12 @@
 */
 
 #include "stdafx.h"
-//#include "Mutex_VS_SharedMutex.h"
-#include "Mutex_VS_LockGuard_VS_UniqueLock.h"
+#include "Mutex_VS_SharedMutex.h"
+//#include "Mutex_VS_LockGuard_VS_UniqueLock.h"
 
 int main()
 {
-	Mutex_VS_LockGuard_VS_UniqueLock::TestFunc();
+	Mutex_VS_SharedMutex::WriteReadTest();
 
 	system("Pause");
 }

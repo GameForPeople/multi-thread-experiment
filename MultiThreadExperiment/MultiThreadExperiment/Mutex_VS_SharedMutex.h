@@ -2,5 +2,6 @@
 
 namespace Mutex_VS_SharedMutex
 {
-	void TestFunc();
+	void SimpleLockUnlockTest();
+	void WriteReadTest();
 }
