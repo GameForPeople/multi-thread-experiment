@@ -1,8 +1,8 @@
 #include "stdafx.h"
 
-#include "Mutex_VS_SharedMutex.h"
+#include "Lock_Performance.h"
 
-namespace Mutex_VS_SharedMutex
+namespace LOCK_PERFORMANCE
 {
 	/*
 		WriteReadTest()
@@ -276,7 +276,6 @@ namespace Mutex_VS_SharedMutex
 		}
 #pragma endregion
 
-
 #pragma region [ ATOMIC INT ]
 		{
 			atomic<int> sumValue = 0;
@@ -327,4 +326,5 @@ namespace Mutex_VS_SharedMutex
 		}
 #pragma endregion
 	}
+
 }

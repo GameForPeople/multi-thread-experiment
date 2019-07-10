@@ -1,7 +1,9 @@
 #pragma once
 
-namespace Mutex_VS_SharedMutex
+namespace LOCK_PERFORMANCE
 {
 	void SimpleLockUnlockTest();
+
 	void WriteReadTest();
+
 }
