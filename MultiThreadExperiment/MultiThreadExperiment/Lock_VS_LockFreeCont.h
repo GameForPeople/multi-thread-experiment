@@ -9,4 +9,5 @@ namespace LOCK_VS_LOCKFREECONT
 	};
 
 	void TestFunc();
+	void DoSomething();
 }
