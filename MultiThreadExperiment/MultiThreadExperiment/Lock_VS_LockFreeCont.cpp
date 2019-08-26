@@ -11,10 +11,13 @@ void LOCK_VS_LOCKFREECONT::DoSomething()
 	// Mutex(200ms), SpinLock(600ms), LockFreeCont(300ms)
 
 	// 0ns 
-	// this_thread::sleep_for(0ns); // Mutex(1100ms), SpinLock(650ms), LockFreeCont(300ms)
+	// this_thread::sleep_for(0ns); // Mutex(1100ms), SpinLock(650ms), LockFreeCont(600ms)
 
 	// 1ns 
-	//this_thread::sleep_for(1ns); // Mutex(145000ms), SpinLock(82000ms), LockFreeCont(300ms)
+	// this_thread::sleep_for(1ns); // Mutex(85000ms), SpinLock(45000ms), LockFreeCont(45000ms)
+
+	// yield
+	// this_thread::yield();	// Mutex(1100ms), SpinLock(650ms), LockFreeCont(600ms)
 }
 
 void LOCK_VS_LOCKFREECONT::TestFunc()
@@ -150,7 +153,7 @@ void LOCK_VS_LOCKFREECONT::TestFunc()
 						for (int i = 0; i < LOOP_COUNT; ++i)
 						{
 							Node* pBuffer{ nullptr };
-							while (!nodeCont.try_pop(pBuffer))
+							while (!nodeCont.try_pop(pBuffer));
 
 							LOCK_VS_LOCKFREECONT::DoSomething();
 
