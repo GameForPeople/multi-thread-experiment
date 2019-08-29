@@ -2,6 +2,14 @@
 
 #include "Async.h"
 
+/*
+	LazyAndEager
+	std::launch::deferred ==> Get, Wait 불릴때 까지 계산 안하고 대기.
+	std::launch::async ==> 멀티쓰레드로 바로 병렬 처리.
+
+	FireForget
+	async는 병렬로 처리되나, 소멸자가 불릴때 블로킹된다.
+*/
 namespace ASYNC
 {
 	void SimpleExample()
@@ -29,20 +37,43 @@ namespace ASYNC
 
 	void FireForget()
 	{
+		// R-Value Future
 		std::async(std::launch::async, []() 
 			{
-				std::this_thread::sleep_for(std::chrono::seconds(2));
-				std::cout << "First Thread Fire!" << std::endl;
-			}
-		);
-
-		std::async(std::launch::async, []()
-			{
 				std::this_thread::sleep_for(std::chrono::seconds(1));
-				std::cout << "Second Thread Fire!" << std::endl;
+				std::cout << "First Thread Fire!" << std::endl;					// 1
 			}
-		);
+		);	
 
-		std::cout << "Main Thread Fire!" << std::endl;
+		{
+			// L-Value Future & MultiThread
+			auto tempFuture = std::async(std::launch::async, []()
+				{
+					std::this_thread::sleep_for(std::chrono::seconds(1));
+					std::cout << "Second Thread Fire!" << std::endl;			// 3
+				}
+			);
+
+			std::cout << "First Reload!" << std::endl;							// 2
+		}
+		std::cout << "Second Reload!" << std::endl;								// 4
+
+		{
+			// L-Value Future & MultiThread with Condition
+			std::atomic<bool> tempFlag = false;
+			auto tempFuture = std::async(std::launch::async, [&tempFlag]()
+				{
+					std::this_thread::sleep_for(std::chrono::seconds(1));
+					std::cout << "Third Thread Fire!" << std::endl;				// 5
+					tempFlag = true;
+				}
+			);
+
+			while (!tempFlag) { std::cout << "."; std::this_thread::sleep_for(0.6s); };
+
+			std::cout << "Third Reload!" << std::endl;							// 6
+		}
+
+		std::cout << "Main Thread Fire!" << std::endl;							// 7
 	}
 }
