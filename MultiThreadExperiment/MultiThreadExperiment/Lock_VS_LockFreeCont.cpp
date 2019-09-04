@@ -3,25 +3,52 @@
 #include "Lock_VS_LockFreeCont.h"
 #include <queue>
 
+std::mutex globalLock;
+std::unordered_set<int> globalCont;
+
 void LOCK_VS_LOCKFREECONT::DoSomething()
 {
+	//===========================================================================================================
 	// Thread 4, LoopCount 1000000
 
 	// 아무것도 안할 때 
-	// Mutex(200ms), SpinLock(600ms), LockFreeCont(300ms)
+	// Mutex(200ms), SpinLock(600ms), LockFreeCont(300ms), New-Delete (50ms)
 
 	// 0ns 
-	// this_thread::sleep_for(0ns); // Mutex(1100ms), SpinLock(650ms), LockFreeCont(600ms)
+	// this_thread::sleep_for(0ns); // Mutex(800ms), SpinLock(900ms), LockFreeCont(300ms), New-Delete (150ms)
 
 	// 1ns 
-	// this_thread::sleep_for(1ns); // Mutex(85000ms), SpinLock(45000ms), LockFreeCont(45000ms)
-
+	//this_thread::sleep_for(1ns); // Mutex(11000ms), SpinLock(9000ms), LockFreeCont(6000ms), New-Delete (3000ms)
+	
 	// yield
-	// this_thread::yield();	// Mutex(1100ms), SpinLock(650ms), LockFreeCont(600ms)
+	// this_thread::yield();	// == 0ns 
+
+	// 이상한 짓  // Mutex(12000ms), SpinLock(12000ms), LockFreeCont(12000ms), New-Delete (12000ms)
+	//atomic<bool> tempBool{ false };
+	//std::unordered_set<int> tempCont;
+	//{
+	//	std::unique_lock<std::mutex> tempLock(globalLock);
+	//	tempCont = globalCont;
+	//}
+	//if (tempCont.contains(10))
+	//{
+	//	tempBool = true;
+	//}
+
+	//===========================================================================================================
+	// Thread 1, LoopCount 1000000
+
+	// 아무것도 안할 때 (비 경쟁 상황 재현)
+	// Mutex(40ms), SpinLock(10ms), LockFreeCont(30ms), New-Delete (45ms)
 }
 
 void LOCK_VS_LOCKFREECONT::TestFunc()
 {
+	for (int i = 0; i < 30; ++i)
+	{
+		globalCont.emplace(i);
+	}
+
 	const int NODE_COUNT = 100;
 	const int LOOP_COUNT = 1000000;
 	const int FUTURE_COUNT = 4;
@@ -83,6 +110,7 @@ void LOCK_VS_LOCKFREECONT::TestFunc()
 		std::queue<Node*> nodeCont;
 		std::vector<std::future<void>> futureCont;
 		std::atomic_flag spinLock;
+		spinLock.clear(std::memory_order_release);
 
 		for (int i = 0; i < NODE_COUNT; ++i) { nodeCont.emplace(new Node()); }
 
@@ -173,6 +201,45 @@ void LOCK_VS_LOCKFREECONT::TestFunc()
 			Node* pBuffer{ nullptr };
 			while (nodeCont.try_pop(pBuffer)) { delete pBuffer; }
 		}
+	}
+
+	{
+		std::vector<std::future<void>> futureCont;
+
+		futureCont.reserve(FUTURE_COUNT);
+
+		auto startTime = high_resolution_clock::now();
+
+		for (int i = 0; i < FUTURE_COUNT; ++i)
+		{
+			futureCont.push_back
+			(
+				std::async
+				(
+					std::launch::async, [ /* void */]() noexcept -> void
+					{
+						for (int i = 0; i < LOOP_COUNT; ++i)
+						{
+							Node* pBuffer{ nullptr };
+							{
+								pBuffer = new Node;
+							}
+
+							LOCK_VS_LOCKFREECONT::DoSomething();
+
+							{
+								delete pBuffer;
+							}
+						}
+					}
+				)
+			);
+		}
+
+		for (auto& iter : futureCont) { /* iter.wait(); */ iter.get(); }
+
+		auto endTime = high_resolution_clock::now() - startTime;
+		std::cout << "New-Delete의 성능은? " << duration_cast<milliseconds>(endTime).count() << " msecs\n";
 	}
 }
 

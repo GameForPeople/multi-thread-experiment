@@ -4,7 +4,7 @@ namespace LOCK_VS_LOCKFREECONT
 {
 	struct Node
 	{
-		inline static constexpr int BUFFER_SIZE = 1000;
+		inline static constexpr int BUFFER_SIZE = 255;
 		int buffer[BUFFER_SIZE];
 	};
 
