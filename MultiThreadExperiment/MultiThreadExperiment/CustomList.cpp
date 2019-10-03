@@ -2,7 +2,7 @@
 
 #include "CustomList.h"
 
-namespace LIST_COARSE_GRAINED_SYNC {
+namespace LIST_0_COARSE_GRAINED_SYNC {
 	Node::Node() noexcept
 		: key()
 		, next(nullptr)
@@ -124,5 +124,4 @@ namespace LIST_COARSE_GRAINED_SYNC {
 		}
 	}
 }
-
 

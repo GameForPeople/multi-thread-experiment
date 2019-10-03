@@ -1,12 +1,16 @@
 #pragma once
 
 /*
-	성긴 동기화(CList)
+	성긴 동기화()
 		- 전체를 하나의 락으로 처리하자
 
 	세밀한 동기화()
 		- 각 노드단위를 락으로 처리하자
 		- 이동 시, 즉 Next값을 읽을 때도 Lock을 해야한다.
+
+	낙천적 동기화()
+		- 이동할 때는 잠그지 않고
+		- 수정을 할때 잠근다.
 */
 
 namespace USING
@@ -14,7 +18,30 @@ namespace USING
 	using _KeyType = int;
 }using namespace USING;
 
-namespace LIST_COARSE_GRAINED_SYNC // 성긴 동기화
+namespace GLOBAL
+{
+
+}
+
+namespace GLOBAL_LIST_FUNCTION
+{
+	template <typename _List, typename _Node>
+	void Display(const _List& list, const int inCount = 20)
+	{
+		_Node* ptr = list.head.next;
+		int count = inCount;
+
+		while (ptr != &list.tail)
+		{
+			std::cout << inCount - count << ": " << ptr->key << " , ";
+			ptr = ptr->next;
+
+			if (--count <= 0) break;
+		}
+	}
+};
+
+namespace LIST_0_COARSE_GRAINED_SYNC // 성긴 동기화
 {
 	class Node {
 	private:
@@ -49,46 +76,45 @@ namespace LIST_COARSE_GRAINED_SYNC // 성긴 동기화
 
 		bool Contains(const _KeyType key);
 	};
-}
+};
 
-namespace LIST_FINE_GRAINED_SYNC // 세밀한 동기화
+namespace LIST_1_FINE_GRAINED_SYNC // 세밀한 동기화
 {
 	class Node {
 	public:
 		_KeyType key;
 		Node* next;
-		std::mutex lock;
+		std::mutex nodeLock;
 
 		Node() noexcept
 			: key()
 			, next(nullptr)
-			, lock()
+			, nodeLock()
 		{
 		}
 
 		Node(const _KeyType keyValue) noexcept
 			: key(keyValue)
 			, next(nullptr)
-			, lock()
+			, nodeLock()
 		{
 		}
 
 		~Node() {}
 	};
 
-	class CLIST {
+	class LIST {
+	public:
 		Node head, tail;
 
-	public:
-		CLIST() noexcept
-			: head(0x80000000)
-			, tail(0x7FFFFFFF)
+		LIST() noexcept
+			: head(INT_MIN)
+			, tail(INT_MAX)
 		{
 			head.next = &tail;
-			Init();
 		}
 
-		~CLIST()
+		~LIST()
 		{
 			Init();
 		}
@@ -105,119 +131,563 @@ namespace LIST_FINE_GRAINED_SYNC // 세밀한 동기화
 			}
 		}
 
-		void Display(const int inCount = 20)
-		{
-			Node* p = head.next;
-			int count = inCount;
-
-			while (p != &tail)
-			{
-				std::cout << inCount - count << ": " << p->key << " , ";
-				p = p->next;
-
-				if (--count <= 0) break;
-			}
-		}
-
 		bool Add(const _KeyType key)
 		{
-			Node* pred, * curr;
+			Node* pred{ nullptr };
+			Node* curr{ nullptr };
+
+			head.nodeLock.lock();					// +++ 1
 			pred = &head;
 
-			pred->lock.lock();
 			curr = pred->next;
-			pred->lock.unlock();
+			curr->nodeLock.lock();					// +++ 2
 
-			curr->lock.lock();
-
-			while (curr->key < key)
+			while (curr->key < key)					// 2
 			{
-				pred->lock.unlock();
+				pred->nodeLock.unlock();			// --- 1
 				pred = curr;
-
-				curr->next->lock.lock();
 				curr = curr->next;
+				curr->nodeLock.lock();				// +++ 2
 			}
 
-			if (key == curr->key) { pred->lock.unlock(); curr->lock.unlock(); return false; }
-			else
+			if (key == curr->key)					// 2
+			{ 
+				curr->nodeLock.lock();				// --- 1
+				pred->nodeLock.unlock();			// --- 0
+				return false; 
+			}
+			else									// 2
 			{
-				Node* node = new Node(key);
-				node->next = curr;
-				pred->next = node;
-				pred->lock.unlock();
-				curr->lock.unlock();
+				Node* tempNode = new Node(key);
+				tempNode->next = curr;
+				pred->next = tempNode;
+				curr->nodeLock.lock();				// --- 1
+				pred->nodeLock.unlock();			// --- 0
 				return true;
 			}
 		}
 
 		bool Remove(const _KeyType key)
 		{
-			Node* pred, * curr;
+			Node* pred{ nullptr };
+			Node* curr{ nullptr };
+
+			head.nodeLock.lock();					// +++ 1
 			pred = &head;
+			curr = pred->next;
+			curr->nodeLock.lock();					// +++ 2
 
+			while (curr->key < key)
 			{
-				pred->lock.lock();
-				curr = pred->next;
-				pred->lock.unlock();
+				pred->nodeLock.unlock();			// --- 1
+				pred = curr;
+				curr = curr->next;					
+				curr->nodeLock.lock();				// +++ 2
+			}
 
-				curr->lock.lock();
+			if (key == curr->key)					// 2
+			{
+				pred->next = curr->next;
+				delete curr;
 
-				while (curr->key < key)
-				{
-					pred->lock.unlock();
-					pred = curr;
-
-					curr->next->lock.lock();
-					curr = curr->next;
-				}
-
-				if (key == curr->key)
-				{
-					curr->next->lock.lock();
-					pred->next = curr->next;
-					curr->next->lock.unlock();
-					pred->lock.unlock();
-
-					std::mutex& tempLock = curr->lock;
-					delete curr;
-					tempLock.unlock();
-					return true;
-				}
-				else
-				{
-					pred->lock.unlock();
-					curr->lock.unlock();
-					return false;
-				}
+				pred->nodeLock.unlock();			// --- 1
+				curr->nodeLock.unlock();			// --- 0
+				return true;
+			}
+			else									// 2
+			{
+				pred->nodeLock.unlock();			// --- 1
+				curr->nodeLock.unlock();			// --- 0
+				return false;
 			}
 		}
 
 		bool Contains(const _KeyType key)
 		{
-			Node* pred, * curr;
-			pred = &head;
-			{
-				pred->lock.lock();
-				curr = pred->next;
-				pred->lock.unlock();
+			Node* pred{ nullptr };
+			Node* curr{ nullptr };
 
-				curr->lock.lock();
-				while (curr->key < key)
-				{
-					pred = curr;
-					curr->next->lock.lock();
-					curr = curr->next;
-				}
-				if (key == curr->key) {
-					curr->lock.unlock();
-					return true;
-				}
-				else {
-					curr->lock.unlock();
-					return false;
-				}
+			head.nodeLock.lock();					// +++ 1
+			pred = &head;
+			curr = pred->next;
+			curr->nodeLock.lock();					// +++ 2
+
+			while (curr->key < key)
+			{
+				pred->nodeLock.unlock();			// --- 1
+				pred = curr;
+				curr = curr->next;
+				curr->nodeLock.lock();				// +++ 2
 			}
+
+			if (key == curr->key) 
+			{
+				pred->nodeLock.unlock();			// --- 1
+				curr->nodeLock.unlock();			// --- 0
+				return true;
+			}
+			else 
+			{
+				pred->nodeLock.unlock();			// --- 1
+				curr->nodeLock.unlock();			// --- 0
+				return false;
+			}
+		}
+	};
+}
+
+namespace LIST_1_FINE_GRAINED_SYNC_WithSmartLock // 세밀한 동기화
+{
+	class Node {
+	public:
+		_KeyType key;
+		Node* next;
+		std::mutex nodeLock;
+
+		Node() noexcept
+			: key()
+			, next(nullptr)
+			, nodeLock()
+		{
+		}
+
+		Node(const _KeyType keyValue) noexcept
+			: key(keyValue)
+			, next(nullptr)
+			, nodeLock()
+		{
+		}
+
+		~Node() {}
+	};
+
+	class LIST {
+	public:
+		Node head, tail;
+
+		LIST() noexcept
+			: head(INT_MIN)
+			, tail(INT_MAX)
+		{
+			head.next = &tail;
+		}
+
+		~LIST()
+		{
+			Init();
+		}
+
+		void Init()
+		{
+			Node* ptr;
+
+			while (head.next != &tail)
+			{
+				ptr = head.next;
+				head.next = head.next->next;
+				delete ptr;
+			}
+		}
+
+		bool Add(const _KeyType key)
+		{
+			Node* pred{ nullptr };
+			Node* curr{ nullptr };
+
+			std::unique_lock<std::mutex> predLock(head.nodeLock, std::deff)
+			head.nodeLock.lock();					// +++ 1
+			pred = &head;
+
+			curr = pred->next;
+			curr->nodeLock.lock();					// +++ 2
+
+			while (curr->key < key)					// 2
+			{
+				pred->nodeLock.unlock();			// --- 1
+				pred = curr;
+				curr = curr->next;
+				curr->nodeLock.lock();				// +++ 2
+			}
+
+			if (key == curr->key)					// 2
+			{
+				curr->nodeLock.lock();				// --- 1
+				pred->nodeLock.unlock();			// --- 0
+				return false;
+			}
+			else									// 2
+			{
+				Node* tempNode = new Node(key);
+				tempNode->next = curr;
+				pred->next = tempNode;
+				curr->nodeLock.lock();				// --- 1
+				pred->nodeLock.unlock();			// --- 0
+				return true;
+			}
+		}
+
+		bool Remove(const _KeyType key)
+		{
+			Node* pred{ nullptr };
+			Node* curr{ nullptr };
+
+			head.nodeLock.lock();					// +++ 1
+			pred = &head;
+			curr = pred->next;
+			curr->nodeLock.lock();					// +++ 2
+
+			while (curr->key < key)
+			{
+				pred->nodeLock.unlock();			// --- 1
+				pred = curr;
+				curr = curr->next;
+				curr->nodeLock.lock();				// +++ 2
+			}
+
+			if (key == curr->key)					// 2
+			{
+				pred->next = curr->next;
+				delete curr;
+
+				pred->nodeLock.unlock();			// --- 1
+				curr->nodeLock.unlock();			// --- 0
+				return true;
+			}
+			else									// 2
+			{
+				pred->nodeLock.unlock();			// --- 1
+				curr->nodeLock.unlock();			// --- 0
+				return false;
+			}
+		}
+
+		bool Contains(const _KeyType key)
+		{
+			Node* pred{ nullptr };
+			Node* curr{ nullptr };
+
+			head.nodeLock.lock();					// +++ 1
+			pred = &head;
+			curr = pred->next;
+			curr->nodeLock.lock();					// +++ 2
+
+			while (curr->key < key)
+			{
+				pred->nodeLock.unlock();			// --- 1
+				pred = curr;
+				curr = curr->next;
+				curr->nodeLock.lock();				// +++ 2
+			}
+
+			if (key == curr->key)
+			{
+				pred->nodeLock.unlock();			// --- 1
+				curr->nodeLock.unlock();			// --- 0
+				return true;
+			}
+			else
+			{
+				pred->nodeLock.unlock();			// --- 1
+				curr->nodeLock.unlock();			// --- 0
+				return false;
+			}
+		}
+	};
+}
+
+namespace LIST_2_OPTIMISTIC_SYNC // 낙천적 동기화
+{
+	class Node {
+	public:
+		_KeyType key;
+		Node* next;
+		std::mutex nodeLock;
+
+		Node() noexcept
+			: key()
+			, next(nullptr)
+			, nodeLock()
+		{
+		}
+
+		Node(const _KeyType keyValue) noexcept
+			: key(keyValue)
+			, next(nullptr)
+			, nodeLock()
+		{
+		}
+
+		~Node() {}
+	};
+
+	class LIST {
+	public:
+		Node head, tail;
+
+		LIST() noexcept
+			: head(INT_MIN)
+			, tail(INT_MAX)
+		{
+			head.next = &tail;
+		}
+
+		~LIST()
+		{
+			Init();
+		}
+
+		void Init()
+		{
+			Node* ptr;
+
+			while (head.next != &tail)
+			{
+				ptr = head.next;
+				head.next = head.next->next;
+				delete ptr;
+			}
+		}
+
+		bool Validate(const Node* const inPred, const Node* const inCurr)
+		{
+			Node* comp = &head;
+
+			while (comp->key <= inPred->key)
+			{
+				if (comp == inPred) { return comp->next == inCurr; }
+				comp = comp->next;
+			}
+			return false;
+		}
+
+		bool Add(const _KeyType key)
+		{
+			Node* pred{ nullptr };
+			Node* curr{ nullptr };
+
+			pred = &head;
+			curr = pred->next;
+
+			while (curr->key < key)				
+			{
+				pred = curr;
+				curr = curr->next;
+			}
+
+			{
+				std::scoped_lock<std::mutex, std::mutex> lock(pred->nodeLock, curr->nodeLock);
+
+				if (Validate(pred, curr)) 
+				{
+					if (key == curr->key)
+					{
+						return false;
+					}
+					else
+					{
+						Node* tempNode = new Node(key);
+						tempNode->next = curr;
+						pred->next = tempNode;
+						return true;
+					}
+				}
+				return false;
+			}
+		}
+
+		bool Remove(const _KeyType key)
+		{
+			Node* pred{ nullptr };
+			Node* curr{ nullptr };
+
+			pred = &head;
+			curr = pred->next;
+
+			while (curr->key < key)
+			{
+				pred = curr;
+				curr = curr->next;
+			}
+
+			{
+				std::scoped_lock<std::mutex, std::mutex> lock(pred->nodeLock, curr->nodeLock);
+
+				if (Validate(pred, curr))
+				{
+					if (key == curr->key)				
+					{
+						pred->next = curr->next;
+						// delete curr; // memory Leak!
+						return true;
+					}
+					else { return false; }
+				}
+				return false;
+			}
+		}
+
+		bool Contains(const _KeyType key)
+		{
+			Node* pred{ nullptr };
+			Node* curr{ nullptr };
+
+			pred = &head;
+			curr = pred->next;
+
+			while (curr->key < key)
+			{
+				pred = curr;
+				curr = curr->next;
+			}
+
+			{
+				std::scoped_lock<std::mutex, std::mutex> lock(pred->nodeLock, curr->nodeLock);
+
+				if (Validate(pred, curr))
+				{
+					return (key == curr->key)
+						? true
+						: false;
+				}
+				return false;
+			}
+		}
+	};
+}
+
+namespace LIST_3_LAZY_SYNC // 게으른 동기화
+{
+	class Node {
+	public:
+		_KeyType key;
+		Node* next;
+		std::mutex nodeLock;
+		bool marked;
+
+		Node() noexcept
+			: key()
+			, next(nullptr)
+			, nodeLock()
+			, marked(false)
+		{
+		}
+
+		Node(const _KeyType keyValue) noexcept
+			: key(keyValue)
+			, next(nullptr)
+			, nodeLock()
+			, marked(false)
+		{
+		}
+
+		~Node() {}
+	};
+
+	class LIST {
+	public:
+		Node head, tail;
+
+		LIST() noexcept
+			: head(INT_MIN)
+			, tail(INT_MAX)
+		{
+			head.next = &tail;
+		}
+
+		~LIST()
+		{
+			Init();
+		}
+
+		void Init()
+		{
+			Node* ptr;
+
+			while (head.next != &tail)
+			{
+				ptr = head.next;
+				head.next = head.next->next;
+				delete ptr;
+			}
+		}
+
+		bool Validate(const Node* const pred, const Node* const curr)
+		{
+			return !pred->marked && !curr->marked && pred->next == curr;
+		}
+
+		bool Add(const _KeyType key)
+		{
+			Node* pred{ nullptr };
+			Node* curr{ nullptr };
+
+			pred = &head;
+			curr = pred->next;
+
+			while (curr->key < key)
+			{
+				pred = curr;
+				curr = curr->next;
+			}
+
+			{
+				std::scoped_lock<std::mutex, std::mutex> lock(pred->nodeLock, curr->nodeLock);
+
+				if (Validate(pred, curr))
+				{
+					if (key == curr->key)
+					{
+						return false;
+					}
+					else
+					{
+						Node* tempNode = new Node(key);
+						tempNode->next = curr;
+						pred->next = tempNode;
+						return true;
+					}
+				}
+				return false;
+			}
+		}
+
+		bool Remove(const _KeyType key)
+		{
+			Node* pred{ nullptr };
+			Node* curr{ nullptr };
+
+			pred = &head;
+			curr = pred->next;
+
+			while (curr->key < key)
+			{
+				pred = curr;
+				curr = curr->next;
+			}
+
+			{
+				std::scoped_lock<std::mutex, std::mutex> lock(pred->nodeLock, curr->nodeLock);
+
+				if (Validate(pred, curr))
+				{
+					if (key == curr->key)
+					{
+						curr->marked = true;
+						pred->next = curr->next;
+						// delete curr; // memory Leak!
+						return true;
+					}
+					else { return false; }
+				}
+				return false;
+			}
+		}
+
+		bool Contains(const _KeyType key)
+		{
+			Node* curr = &head;
+			while (curr->key < key) { curr = curr->next; }
+			return curr->key == key && !curr->marked;
 		}
 	};
 }
