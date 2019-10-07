@@ -19,13 +19,22 @@
     <Filter Include="Container">
       <UniqueIdentifier>{7ef90f32-2909-4dd4-9143-8af8184519c7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Lock\shared_mutex">
+      <UniqueIdentifier>{85c947aa-bab4-4d9e-ad98-bb917e38b464}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PerformanceTest">
+      <UniqueIdentifier>{82965390-5f0f-4b1f-aa3b-b9c663c9df31}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ModernCpp">
+      <UniqueIdentifier>{e9fb22b4-9f81-464a-874c-1e2d04bbbbb4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CustomContainer">
+      <UniqueIdentifier>{34b48383-a93b-441c-bf02-7256c7cce187}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="Mutex_VS_SharedMutex.cpp">
-      <Filter>Lock</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>PCH</Filter>
@@ -33,16 +42,73 @@
     <ClCompile Include="concurrentVector_VS_VectorWithLock.cpp">
       <Filter>Container</Filter>
     </ClCompile>
+    <ClCompile Include="Shared_Mutex_WithGuard.cpp">
+      <Filter>Lock\shared_mutex</Filter>
+    </ClCompile>
+    <ClCompile Include="Mutex_VS_LockGuard_VS_UniqueLock.cpp">
+      <Filter>PerformanceTest</Filter>
+    </ClCompile>
+    <ClCompile Include="Lock_Performance.cpp">
+      <Filter>PerformanceTest</Filter>
+    </ClCompile>
+    <ClCompile Include="Atomic_Simple_Test.cpp">
+      <Filter>PerformanceTest</Filter>
+    </ClCompile>
+    <ClCompile Include="Promise_Future.cpp">
+      <Filter>ModernCpp</Filter>
+    </ClCompile>
+    <ClCompile Include="Async.cpp">
+      <Filter>ModernCpp</Filter>
+    </ClCompile>
+    <ClCompile Include="Lock_VS_LockFreeCont.cpp">
+      <Filter>PerformanceTest</Filter>
+    </ClCompile>
+    <ClCompile Include="Async_VS_Function_VS_SwitchIf.cpp">
+      <Filter>ModernCpp</Filter>
+    </ClCompile>
+    <ClCompile Include="Homework_1.cpp">
+      <Filter>PerformanceTest</Filter>
+    </ClCompile>
+    <ClCompile Include="Homework_2.cpp">
+      <Filter>PerformanceTest</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomList.cpp">
+      <Filter>CustomContainer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
       <Filter>PCH</Filter>
     </ClInclude>
-    <ClInclude Include="Mutex_VS_SharedMutex.h">
-      <Filter>Lock</Filter>
-    </ClInclude>
     <ClInclude Include="concurrentVector_VS_VectorWithLock.h">
       <Filter>Container</Filter>
+    </ClInclude>
+    <ClInclude Include="Shared_Mutex_WithGuard.h">
+      <Filter>Lock\shared_mutex</Filter>
+    </ClInclude>
+    <ClInclude Include="Mutex_VS_LockGuard_VS_UniqueLock.h">
+      <Filter>PerformanceTest</Filter>
+    </ClInclude>
+    <ClInclude Include="Lock_Performance.h">
+      <Filter>PerformanceTest</Filter>
+    </ClInclude>
+    <ClInclude Include="Atomic_Simple_Test.h">
+      <Filter>PerformanceTest</Filter>
+    </ClInclude>
+    <ClInclude Include="Promise_Future.h">
+      <Filter>ModernCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="Async.h">
+      <Filter>ModernCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="Lock_VS_LockFreeCont.h">
+      <Filter>PerformanceTest</Filter>
+    </ClInclude>
+    <ClInclude Include="Async_VS_Function_VS_SwitchIf.h">
+      <Filter>ModernCpp</Filter>
+    </ClInclude>
+    <ClInclude Include="CustomList.h">
+      <Filter>CustomContainer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

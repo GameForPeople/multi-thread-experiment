@@ -23,7 +23,8 @@ void LOCK_VS_LOCKFREECONT::DoSomething()
 	// yield
 	// this_thread::yield();	// == 0ns 
 
-	// 이상한 짓  // Mutex(12000ms), SpinLock(12000ms), LockFreeCont(12000ms), New-Delete (12000ms)
+	// 이상한 짓  
+	// Mutex(12000ms), SpinLock(12000ms), LockFreeCont(12000ms), New-Delete (12000ms)
 	//atomic<bool> tempBool{ false };
 	//std::unordered_set<int> tempCont;
 	//{
@@ -40,6 +41,8 @@ void LOCK_VS_LOCKFREECONT::DoSomething()
 
 	// 아무것도 안할 때 (비 경쟁 상황 재현)
 	// Mutex(40ms), SpinLock(10ms), LockFreeCont(30ms), New-Delete (45ms)
+
+
 }
 
 void LOCK_VS_LOCKFREECONT::TestFunc()
