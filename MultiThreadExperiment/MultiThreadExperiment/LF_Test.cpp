@@ -18,7 +18,12 @@ using namespace std::chrono;
 namespace USING
 {
 	using _KeyType = int;	
-	using _PointerType = long;	// x32 32bit, x64 64bit
+
+#ifdef _WIN64
+	using _PointerType = long long;	// x64 64bit
+#else
+	using _PointerType = int;	// x32 32bit
+#endif
 }using namespace USING;
 
 namespace GLOBAL
@@ -26,12 +31,12 @@ namespace GLOBAL
 	constexpr int NUM_TEST = 4000000;
 	constexpr int KEY_RANGE = 1000;
 
-	constexpr _PointerType VALUE_MASK = 0x01;
+	constexpr _PointerType REMOVED_MASK = 0x01;
 
-#ifdef _WIN32
-	constexpr _PointerType POINTER_MASK = 0xFFFFFFFE;
-#else 
+#ifdef _WIN64
 	constexpr _PointerType POINTER_MASK = 0xFFFFFFFFFFFFFFFE;
+#else 
+	constexpr _PointerType POINTER_MASK = 0xFFFFFFFE;
 #endif
 }
 
@@ -67,7 +72,7 @@ namespace LIST_4_LOCKFREE // 락 프리.
 			value = reinterpret_cast<_PointerType>(node);
 
 			value = removed
-				? value | GLOBAL::VALUE_MASK
+				? value | GLOBAL::REMOVED_MASK
 				: value & GLOBAL::POINTER_MASK;
 		}
 
@@ -80,7 +85,7 @@ namespace LIST_4_LOCKFREE // 락 프리.
 		{
 			auto temp = value;
 
-			0 == (temp & GLOBAL::VALUE_MASK)
+			0 == (temp & GLOBAL::REMOVED_MASK)
 				? removed = false
 				: removed = true;
 
@@ -93,11 +98,11 @@ namespace LIST_4_LOCKFREE // 락 프리.
 
 			oldValue = reinterpret_cast<_PointerType>(oldNode);
 
-			if (oldRemoved == true) oldValue = oldValue | GLOBAL::VALUE_MASK;
+			if (oldRemoved == true) oldValue = oldValue | GLOBAL::REMOVED_MASK;
 			else oldValue = oldValue & GLOBAL::POINTER_MASK;
 
 			newValue = reinterpret_cast<_PointerType>(newNode);
-			if (newRemoved) newValue = newValue | GLOBAL::VALUE_MASK;
+			if (newRemoved) newValue = newValue | GLOBAL::REMOVED_MASK;
 			else newValue = newValue & GLOBAL::POINTER_MASK;
 
 			return ATOMIC_UTIL::T_CAS(&value, oldValue, newValue);
@@ -108,7 +113,7 @@ namespace LIST_4_LOCKFREE // 락 프리.
 			auto oldValue = reinterpret_cast<_PointerType>(oldNode);
 			auto newValue = oldValue;
 
-			if (newMark) newValue = newValue | GLOBAL::VALUE_MASK;
+			if (newMark) newValue = newValue | GLOBAL::REMOVED_MASK;
 			else newValue = newValue & GLOBAL::POINTER_MASK;
 
 			return ATOMIC_UTIL::T_CAS(&value, oldValue, newValue);
@@ -308,7 +313,7 @@ int main()
 					; k < size
 					; k++)
 				{
-					switch (const int key = rand() % GLOBAL::KEY_RANGE; 0)// rand() % 3)
+					switch (const int key = rand() % GLOBAL::KEY_RANGE; rand() % 3)
 					{
 					case 0: list.Add(key);	break;
 					case 1: list.Remove(key); break;
