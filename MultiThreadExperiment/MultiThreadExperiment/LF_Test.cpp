@@ -24,6 +24,7 @@ namespace USING
 #else
 	using _PointerType = int;	// x32 32bit
 #endif
+
 }using namespace USING;
 
 namespace GLOBAL
@@ -59,7 +60,7 @@ namespace LIST_4_LOCKFREE // 락 프리.
 
 	class MarkedPointer
 	{
-		_PointerType value;
+		_PointerType value;	// next Node Pointer with removed Mark(1bit).
 	public:
 		MarkedPointer()
 			: value()
@@ -94,14 +95,12 @@ namespace LIST_4_LOCKFREE // 락 프리.
 
 		bool CAS(Node* oldNode, Node* newNode, bool oldRemoved, bool newRemoved)
 		{
-			_PointerType oldValue, newValue;
+			_PointerType oldValue = reinterpret_cast<_PointerType>(oldNode);
 
-			oldValue = reinterpret_cast<_PointerType>(oldNode);
-
-			if (oldRemoved == true) oldValue = oldValue | GLOBAL::REMOVED_MASK;
+			if (oldRemoved) oldValue = oldValue | GLOBAL::REMOVED_MASK;
 			else oldValue = oldValue & GLOBAL::POINTER_MASK;
 
-			newValue = reinterpret_cast<_PointerType>(newNode);
+			_PointerType newValue = reinterpret_cast<_PointerType>(newNode);
 			if (newRemoved) newValue = newValue | GLOBAL::REMOVED_MASK;
 			else newValue = newValue & GLOBAL::POINTER_MASK;
 
@@ -184,7 +183,7 @@ namespace LIST_4_LOCKFREE // 락 프리.
 
 				while (true)
 				{
-					bool removed;
+					bool removed{};
 					auto succ = curr->next.GetPtrWithRemoved(removed);
 
 					while (removed)
@@ -198,7 +197,7 @@ namespace LIST_4_LOCKFREE // 락 프리.
 					if (curr->key >= key) return;
 
 					pred = curr;
-					curr = succ;//curr->next.GetPtr();
+					curr = succ;
 				}
 			}
 		}

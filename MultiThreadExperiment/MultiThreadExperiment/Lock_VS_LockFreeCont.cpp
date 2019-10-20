@@ -219,7 +219,7 @@ void LOCK_VS_LOCKFREECONT::TestFunc()
 			(
 				std::async
 				(
-					std::launch::async, [ /* void */]() noexcept -> void
+					std::launch::async, [LOOP_COUNT /* void */]() noexcept -> void
 					{
 						for (int i = 0; i < LOOP_COUNT; ++i)
 						{

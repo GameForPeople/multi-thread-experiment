@@ -66,14 +66,17 @@
     <ClCompile Include="Async_VS_Function_VS_SwitchIf.cpp">
       <Filter>ModernCpp</Filter>
     </ClCompile>
-    <ClCompile Include="Homework_1.cpp">
-      <Filter>PerformanceTest</Filter>
-    </ClCompile>
-    <ClCompile Include="Homework_2.cpp">
-      <Filter>PerformanceTest</Filter>
-    </ClCompile>
     <ClCompile Include="CustomList.cpp">
       <Filter>CustomContainer</Filter>
+    </ClCompile>
+    <ClCompile Include="LF_Test.cpp">
+      <Filter>PerformanceTest</Filter>
+    </ClCompile>
+    <ClCompile Include="BakeryTest.cpp">
+      <Filter>PerformanceTest</Filter>
+    </ClCompile>
+    <ClCompile Include="BakeryTest_2.cpp">
+      <Filter>PerformanceTest</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
