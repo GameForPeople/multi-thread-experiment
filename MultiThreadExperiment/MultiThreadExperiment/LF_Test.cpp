@@ -1,19 +1,28 @@
+#ifndef WONSY
+
 // cpp
 #include <iostream>
-
-// STL
-#include <vector>
 
 // C++ 11
 #include <atomic>
 #include <thread>
 #include <mutex>
 
-// c++17
+// STL
+#include <vector>
+
+// PPL		 
+#include <concurrent_queue.h>
+
+// attribute
 #define _NODISCARD [[nodiscard]]
 
+// using namespace
 using namespace std;
 using namespace std::chrono;
+using namespace concurrency;
+
+#endif
 
 namespace USING
 {
@@ -68,7 +77,7 @@ namespace LIST_4_LOCKFREE // 락 프리.
 			Set(nullptr, false);
 		};
 
-		void Set(Node* node, bool removed)
+		void Set(const Node* const node, const bool removed)
 		{
 			value = reinterpret_cast<_PointerType>(node);
 
@@ -82,9 +91,9 @@ namespace LIST_4_LOCKFREE // 락 프리.
 			return reinterpret_cast<Node*>(value & GLOBAL::POINTER_MASK);
 		}
 
-		_NODISCARD Node* GetPtrWithRemoved(bool& removed)
+		_NODISCARD Node* GetPtrWithRemoved(bool& removed) const
 		{
-			auto temp = value;
+			const auto temp = value;
 
 			0 == (temp & GLOBAL::REMOVED_MASK)
 				? removed = false
@@ -93,7 +102,7 @@ namespace LIST_4_LOCKFREE // 락 프리.
 			return reinterpret_cast<Node*>(value & GLOBAL::POINTER_MASK);
 		}
 
-		bool CAS(Node* oldNode, Node* newNode, bool oldRemoved, bool newRemoved)
+		bool CAS(const Node* const oldNode, const Node* const newNode, const bool oldRemoved, const bool newRemoved)
 		{
 			_PointerType oldValue = reinterpret_cast<_PointerType>(oldNode);
 
@@ -107,7 +116,7 @@ namespace LIST_4_LOCKFREE // 락 프리.
 			return ATOMIC_UTIL::T_CAS(&value, oldValue, newValue);
 		}
 
-		bool TryMark(Node * oldNode, bool newMark)
+		bool TryMark(const Node * const oldNode, const bool newMark)
 		{
 			auto oldValue = reinterpret_cast<_PointerType>(oldNode);
 			auto newValue = oldValue;
@@ -143,17 +152,34 @@ namespace LIST_4_LOCKFREE // 락 프리.
 	class List {
 	public:
 		Node head, tail;
+		concurrent_queue<Node*> memoryPool;
 
-		List() noexcept
+		List(const int memoryPoolSize = GLOBAL::KEY_RANGE * 2) noexcept
 			: head(INT_MIN)
 			, tail(INT_MAX)
 		{
 			head.next.Set(&tail, false);
+
+			Node* pushedNode{ nullptr };
+			for (int i = 0; i < memoryPoolSize; ++i)
+			{
+				pushedNode = new Node();
+				memoryPool.push(pushedNode);
+			}
 		}
 
 		~List()
 		{
 			Init();
+
+			Node* deletedNode{ nullptr };
+			bool retValue{true};
+
+			while (retValue == false)
+			{
+				retValue = memoryPool.try_pop(deletedNode);
+				delete deletedNode;
+			}
 		}
 
 		void Init()
@@ -164,7 +190,9 @@ namespace LIST_4_LOCKFREE // 락 프리.
 			{
 				ptr = head.next.GetPtr();
 				head.next = head.next.GetPtr()->next;
-				delete ptr;
+				
+				//delete ptr;
+				memoryPool.push(ptr);
 			}
 		}
 
@@ -173,7 +201,8 @@ namespace LIST_4_LOCKFREE // 락 프리.
 		//{
 		//	return !pred->marked && !curr->marked && pred->next == curr;
 		//}
-		void Find(_KeyType key, Node* (&pred), Node* (&curr))
+
+		void Find(const _KeyType key, Node* (&pred), Node* (&curr))
 		{
 		retry:
 			while (true)
@@ -189,6 +218,8 @@ namespace LIST_4_LOCKFREE // 락 프리.
 					while (removed)
 					{
 						if (!(pred->next.CAS(curr, succ, false, false))) { goto retry; }
+
+						memoryPool.push(curr);
 
 						curr = succ;
 						succ = curr->next.GetPtrWithRemoved(removed);
@@ -214,7 +245,15 @@ namespace LIST_4_LOCKFREE // 락 프리.
 				if (curr->key == key) { return false; }
 				else
 				{
-					Node* addedNode = new Node(key);
+					// Node* addedNode = new Node(key);
+					Node* addedNode{ nullptr };
+
+					if (!memoryPool.try_pop(addedNode))
+					{
+						addedNode = new Node(/*key*/);
+					}
+					
+					addedNode->key = key;
 					addedNode->next.Set(curr, false);
 
 					if (pred->next.CAS(curr, addedNode, false, false)) { return true; }
@@ -234,11 +273,11 @@ namespace LIST_4_LOCKFREE // 락 프리.
 				if (curr->key != key) { return false; }
 				else
 				{
-					Node* deletedNode = curr->next.GetPtr();
-					bool removed = curr->next.TryMark(deletedNode, true);
+					Node* nextNodeOfDeletedNode = curr->next.GetPtr();
 
-					if (!removed) continue;
-					pred->next.CAS(curr, deletedNode, false, false);
+					if (!curr->next.TryMark(nextNodeOfDeletedNode, true)) { continue; }
+					if (pred->next.CAS(curr, nextNodeOfDeletedNode, false, false)) { memoryPool.push(curr); }
+					
 					return true;
 				}
 			}
@@ -299,8 +338,9 @@ int main()
 
 	for (int i = 1; i <= 8; i = i * 2)
 	{
-		std::vector<std::thread> threadCont;
 		List list;
+
+		std::vector<std::thread> threadCont;
 		threadCont.reserve(i);
 
  		auto startTime = high_resolution_clock::now();
@@ -312,7 +352,8 @@ int main()
 					; k < size
 					; k++)
 				{
-					switch (const int key = rand() % GLOBAL::KEY_RANGE; rand() % 3)
+					switch (const int key = rand() % GLOBAL::KEY_RANGE
+						; rand() % 3)
 					{
 					case 0: list.Add(key);	break;
 					case 1: list.Remove(key); break;
