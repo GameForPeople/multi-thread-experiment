@@ -36,10 +36,9 @@ namespace QUEUE_0_COARSE_GRAINED_SYNC {
 	// Queue
 	// -----------------
 	Queue::Queue() noexcept
-		: head(new Node(0))
-		, tail(head)
+		: head(0)
+		, tail(&head)
 	{
-		head->next = nullptr;
 	}
 
 	Queue::~Queue()
@@ -49,31 +48,31 @@ namespace QUEUE_0_COARSE_GRAINED_SYNC {
 
 	void Queue::Init()
 	{
-		Node* ptr;
+		Node* ptr{ nullptr };
 
-		while (head->next != nullptr)
+		while (head.next != tail)
 		{
-		 	ptr = head->next;
-		 	head->next = head->next->next;
+		 	ptr = head.next;
+		 	head.next = ptr->next;
 		 	delete ptr;
 		}
-		 
-		delete head;
-		delete tail;
+
+		delete tail; // == head.next
 	}
 
-	void Queue::Display(const int inCount)
+	void Queue::Display(int count /* copy */)
 	{
-		Node* ptr = head->next;
-		int count = inCount;
+		Node* ptr = head.next;
 
 		while (ptr != nullptr)
 		{
-			std::cout << inCount - count << ": " << ptr->key << " , ";
+			std::cout << " " << ptr->key << ",";
 			ptr = ptr->next;
 
 			if (--count <= 0) break;
 		}
+
+		std::cout << "\n";
 	}
 
 	void Queue::Enq(const _KeyType key)
@@ -92,60 +91,61 @@ namespace QUEUE_0_COARSE_GRAINED_SYNC {
 		{
 			std::unique_lock<std::mutex> LocalLock(queueLock);
 
-			if (head->next == nullptr)
-			{
-				return nullptr;
-			}
-			pDeqNode = head->next;
-			head->next = head->next->next;
+			if (head.next == nullptr) { return nullptr; }
+			
+			pDeqNode = head.next;
+			head.next = head.next->next;
 		}
 		return pDeqNode;
 	}
 }
 
-int main()
+int main11()
 {
 	using namespace QUEUE_0_COARSE_GRAINED_SYNC;
 
 	for (int i = 1; i <= 8; i = i * 2)
 	{
 		Queue queue;
-		std::cout <<" hi \n";
 
 		std::vector<std::thread> threadCont;
 		threadCont.reserve(i);
 
 		auto startTime = high_resolution_clock::now();
-
-		for (int j = 0; j < 1000; ++j)
 		{
-			queue.Enq(0);
-		}
+			for (int j = 0; j < 100000; ++j) { queue.Enq(j); }
 
-		for (int j = 0; j < i; ++j)
-		{
-			threadCont.emplace_back([&]() {
-				for (int k = 0, size = (GLOBAL::NUM_TEST / i)
-					; k < size
-					; k++)
-				{
-					switch (const int key = rand() % GLOBAL::KEY_RANGE
-						; rand() % 2)
+			for (int j = 0; j < i; ++j)
+			{
+				threadCont.emplace_back([&]() {
+					for (int k = 0, size = (GLOBAL::NUM_TEST / i)
+						; k < size
+						; k++)
 					{
-					case 0: queue.Enq(j);	break;
-					case 1: queue.Enq(j);	break;
-
-						//					case 1: Node* ptr = queue.Deq();  delete ptr;	break;
-											//default: cout << "Error\n"; exit(-1);
+						switch (const int key = rand() % GLOBAL::KEY_RANGE
+							; rand() % 2)
+						{
+							case 0: 
+							{
+								queue.Enq(k);	
+								break;
+							}
+							case 1: 
+							{
+								delete queue.Deq();
+								break;
+							}
+							default: 
+								cout << "Error\n"; exit(-1);
+						}
 					}
-				}
-			});
+				});
+			}
+
+			for (auto& thread : threadCont) { thread.join(); }
 		}
-
-		for (auto& thread : threadCont) { thread.join(); }
-
 		auto endTime = high_resolution_clock::now() - startTime;
-		std::cout << i << "개의 성능은? " << duration_cast<milliseconds>(endTime).count() << " msecs\n";
+		std::cout << "\n 쓰레드 "<< i << "개의 성능은? " << duration_cast<milliseconds>(endTime).count() << " msecs\n";
 
 		queue.Display();
 	}

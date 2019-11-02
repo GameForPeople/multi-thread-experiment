@@ -56,7 +56,7 @@ namespace QUEUE_0_COARSE_GRAINED_SYNC // 성긴 동기화
 	};
 
 	class Queue {
-		Node* head;
+		Node head;
 		Node* tail;
 		std::mutex queueLock;
 
