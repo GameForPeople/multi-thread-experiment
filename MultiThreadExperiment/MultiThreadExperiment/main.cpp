@@ -31,3 +31,37 @@
 //
 //	system("Pause");
 //}
+
+void Func()
+{
+	int a{ 0 };
+	int* b{ nullptr };
+	int c[100]{ 0, };
+	int d{ 0 };
+	int* e{ nullptr };
+	int f[100]{ 0, };
+
+	std::cout 
+		<< "a : " << &a 
+		<< ", b : " << &b 
+		<< ", c : " << &c 
+		<< ", d : " << &d 
+		<< ", e : " << &e
+		<< ", f : " << &f
+		<< "\n";
+
+	//std::atomic_thread_fence(std::memory_order_seq_cst);
+
+	f[-1] = 100;	// d
+	f[101] = 100;	// f[0]
+
+	std::cout 
+		<< ", d : " << d
+		<< ", f : " << f[0]
+		<< "\n";
+}
+
+//int main()
+//{
+//	system("Pause");
+//}

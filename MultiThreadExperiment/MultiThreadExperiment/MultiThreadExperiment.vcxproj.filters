@@ -78,6 +78,9 @@
     <ClCompile Include="BakeryTest_2.cpp">
       <Filter>PerformanceTest</Filter>
     </ClCompile>
+    <ClCompile Include="CustomQueue.cpp">
+      <Filter>CustomContainer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -111,6 +114,9 @@
       <Filter>ModernCpp</Filter>
     </ClInclude>
     <ClInclude Include="CustomList.h">
+      <Filter>CustomContainer</Filter>
+    </ClInclude>
+    <ClInclude Include="CustomQueue.h">
       <Filter>CustomContainer</Filter>
     </ClInclude>
   </ItemGroup>

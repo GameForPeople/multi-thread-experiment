@@ -136,7 +136,13 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="LF_Test.cpp" />
+    <ClCompile Include="CustomQueue.cpp" />
+    <ClCompile Include="LF_Test.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Lock_VS_LockFreeCont.cpp" />
     <ClCompile Include="main.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
@@ -156,6 +162,7 @@
     <ClInclude Include="Atomic_Simple_Test.h" />
     <ClInclude Include="concurrentVector_VS_VectorWithLock.h" />
     <ClInclude Include="CustomList.h" />
+    <ClInclude Include="CustomQueue.h" />
     <ClInclude Include="Lock_VS_LockFreeCont.h" />
     <ClInclude Include="Mutex_VS_LockGuard_VS_UniqueLock.h" />
     <ClInclude Include="Lock_Performance.h" />
