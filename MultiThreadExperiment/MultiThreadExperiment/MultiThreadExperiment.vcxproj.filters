@@ -31,6 +31,9 @@
     <Filter Include="CustomContainer">
       <UniqueIdentifier>{34b48383-a93b-441c-bf02-7256c7cce187}</UniqueIdentifier>
     </Filter>
+    <Filter Include="CustomType">
+      <UniqueIdentifier>{52065fe9-e0df-4e95-a8ea-e722949f3f30}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -80,6 +83,9 @@
     </ClCompile>
     <ClCompile Include="CustomQueue.cpp">
       <Filter>CustomContainer</Filter>
+    </ClCompile>
+    <ClCompile Include="MultithreadSafeThread.hpp">
+      <Filter>CustomType</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
