@@ -29,7 +29,7 @@ class MultiThreadSafeString
 	static constexpr int  MAX_SIZE  = 10;
 	static constexpr char NULL_CHAR = '\0';
 
-	                 int  size = 0;
+	                 int  size    = 0;
 	                 char charArr[ MAX_SIZE + 1 ];
 
 public:
@@ -48,19 +48,25 @@ public:
 	std::string Get()
 	{
 		START_:
-		char tempCharArr[ MAX_SIZE + 1 ];
-		std::memcpy( tempCharArr, charArr, size );
 
-		for ( int i = 0; i < size; ++i )
+		char tempCharArr[ MAX_SIZE + 1 ];
+
+		const int oldSize = size;
+		std::memcpy( tempCharArr, charArr, oldSize );
+
+		for ( int i = 0; i < oldSize; ++i )
 		{
 			if ( tempCharArr[ i ] == NULL_CHAR )
 			{
 				goto START_;
-				return std::string( tempCharArr, i );
+				//return std::string( tempCharArr, i );
 			}
 		}
 
-		return std::string( tempCharArr, size );
+		if ( oldSize != size )
+			goto START_;
+
+		return std::string( tempCharArr, oldSize );
 	}
 
 	void Set( const std::string& newString )
@@ -72,63 +78,35 @@ public:
 		charArr[ tempSize ] = NULL_CHAR;
 		std::memcpy( charArr, newString.c_str(), tempSize );
 		size = tempSize;
+
+		// 감소할 때, dddd -> ccc
+		//	dddd 4 --> 적법
+		//	ddd0 4 --> 부적법 ( 루프를 다시 돌아주지 않을 까? 아닌가벼 )
+		//	ccc0 4 --> 부적법 ( 루프를 다시 돌아주지 않을 까? 아닌가벼 )
+		//	ccc0 3 --> 적법
+
+		// 증가할 때, ccc -> dddd
+		//	ccc 3 --> 적법
+		//	cccX0 3 --> 적법
+		//	DDDD0 3 --> 부적법 ( 문제 상황 )
+		//	DDDD0 4 --> 적법
+
+		// 동일할 때, aaa -> bbb
+		// aaa0 3 --> 적법
+		// aaa0 3 --> 적법
+		// bbb0 3 --> 적법
+		// bbb0 3 --> 적법
 	}
 
 public:
-
+	friend std::ostream& operator<<( std::ostream& os, const MultiThreadSafeString& dt );
 };
 
-template < int MAX_SIZE >
-class T_MultiThreadSafeString
+std::ostream& operator<<( std::ostream& os, MultiThreadSafeString& dt)
 {
-	static constexpr char NULL_CHAR = '\0';
-
-	                 int  size = 0;
-	                 char charArr[ MAX_SIZE + 1 ];
-
-public:
-	T_MultiThreadSafeString()
-	{
-		charArr[ MAX_SIZE ] = NULL_CHAR;
-		charArr[ 0 ]        = NULL_CHAR;
-	}
-
-	T_MultiThreadSafeString( const std::string& string )
-	{
-		Set ( string );
-	}
-
-public:
-	std::string Get()
-	{
-		START_:
-		char tempCharArr[ MAX_SIZE + 1 ];
-		std::memcpy( tempCharArr, charArr, size );
-
-		for ( int i = 0; i < size; ++i )
-		{
-			if ( tempCharArr[ i ] == NULL_CHAR )
-				goto START_;
-		}
-
-		return std::string( tempCharArr, size );
-	}
-
-	void Set( const std::string& newString )
-	{
-		auto tempSize = newString.size() > MAX_SIZE
-			? MAX_SIZE
-			: newString.size();
-
-		charArr[ tempSize ] = NULL_CHAR;
-		std::memcpy( charArr, newString.c_str(), tempSize );
-		size = tempSize;
-	}
-
-public:
-
-};
-
+    os << dt.Get();
+    return os;
+}
 
 class LockPtrString
 {
@@ -220,6 +198,45 @@ public:
 public:
 };
 
+class StringWithSpinLock
+{
+	std::string      m_string;
+	std::atomic_bool m_spinLock;
+
+public:
+	StringWithSpinLock()
+		: m_string()
+		, m_spinLock()
+	{
+	}
+
+public:
+	std::string Get()
+	{
+		bool expected = false;
+		while ( !m_spinLock.compare_exchange_strong( expected, true ) )
+		{
+		}
+		
+		const auto retString = m_string;
+		m_spinLock = false;
+
+		return retString;
+	}
+
+	void Set( const std::string& newString )
+	{
+		bool expected = false;
+		while ( !m_spinLock.compare_exchange_strong( expected, true ) )
+		{
+		}
+
+		m_string = newString;
+
+		m_spinLock = false;
+	}
+};
+
 int main()
 {
 	using namespace std::chrono_literals;
@@ -236,27 +253,52 @@ int main()
 			readThreadCont.emplace_back(
 				[ &testString ]()
 				{	
-					for ( int i = 0 ; i < 3; ++i )
+					for ( int i = 0 ; i < 5; ++i )
 					{
 						auto string = testString.Get();
 						{
 							std::unique_lock< std::shared_mutex > localLock( lock );
 							std::cout << string.size() << " : " << string << std::endl;
 						}
-						std::this_thread::sleep_for( 1s );
+						std::this_thread::sleep_for( 0.3s );
 					}
 				} );
 		}
 
-		for ( int i = 0; i < 3; ++i )
+		for ( int i = 0; i < 1; ++i )
 		{
 			writeThreadCont.emplace_back(
 				[ &testString ]()
 				{
 					for ( int i = 0 ; i < 100000000; ++i )
 					{
-						const int randomSize = rand() % 10 + 1;
-						std::string randomString ( randomSize, 'b' );
+						//const int randomSize = rand() % 10 + 1;
+						//std::string randomString ( randomSize, 'b' );
+						
+						std::string randomString;
+						switch ( rand() % 6 )
+						{
+							case 0:
+								randomString = "A";
+								break;
+							case 1:
+								randomString = "BB";
+								break;
+							case 2:
+								randomString = "CCC";
+								break;
+							case 3:
+								randomString = "DDDD";
+								break;
+							case 4:
+								randomString = "EEEEE";
+								break;
+							case 5:
+								randomString = "FFFFFF";
+								break;
+							default:
+							break;
+						}
 
 						testString.Set( randomString );
 					}
@@ -270,16 +312,16 @@ int main()
 		std::cout << "성능은? " << duration_cast<std::chrono::milliseconds>(endTime).count() << " msecs\n";
 	};
 
-	{
-		LockString string;
-		testFunc( string );
-	}
+	//{
+	//	LockString string;
+	//	testFunc( string );
+	//}
+	//{
+	//	StringWithSpinLock string;
+	//	testFunc( string );
+	//}
 	{
 		MultiThreadSafeString string;
-		testFunc( string );
-	}
-	{
-		T_MultiThreadSafeString< 10 > string;
 		testFunc( string );
 	}
 

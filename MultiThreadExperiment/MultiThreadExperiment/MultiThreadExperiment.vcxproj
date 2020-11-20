@@ -164,7 +164,7 @@
     <ClInclude Include="CustomList.h" />
     <ClInclude Include="CustomQueue.h" />
     <ClInclude Include="Lock_VS_LockFreeCont.h" />
-    <ClCompile Include="MultithreadSafeThread.hpp" />
+    <ClCompile Include="MultithreadSafeString.hpp" />
     <ClInclude Include="Mutex_VS_LockGuard_VS_UniqueLock.h" />
     <ClInclude Include="Lock_Performance.h" />
     <ClInclude Include="Promise_Future.h" />

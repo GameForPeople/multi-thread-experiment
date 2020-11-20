@@ -84,9 +84,6 @@
     <ClCompile Include="CustomQueue.cpp">
       <Filter>CustomContainer</Filter>
     </ClCompile>
-    <ClCompile Include="MultithreadSafeThread.hpp">
-      <Filter>CustomType</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -124,6 +121,9 @@
     </ClInclude>
     <ClInclude Include="CustomQueue.h">
       <Filter>CustomContainer</Filter>
+    </ClInclude>
+    <ClInclude Include="MultithreadSafeString.hpp">
+      <Filter>CustomType</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
