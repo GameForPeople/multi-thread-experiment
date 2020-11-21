@@ -149,6 +149,7 @@
     </ClCompile>
     <ClCompile Include="Mutex_VS_LockGuard_VS_UniqueLock.cpp" />
     <ClCompile Include="Lock_Performance.cpp" />
+    <ClCompile Include="PerformanceTest.cpp" />
     <ClCompile Include="Promise_Future.cpp" />
     <ClCompile Include="Shared_Mutex_WithGuard.cpp" />
     <ClCompile Include="stdafx.cpp">
